@@ -1,8 +1,11 @@
 management:
   endpoint:
+    health:
+      show-details: always
     shutdown:
       enabled: true
   endpoints:
     web:
       exposure:
         include: "*"
+#        exclude: "env,beans" # 엔드포인트 필터 (env, beans 엔드포인트는 제외)

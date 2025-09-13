@@ -1,8 +1,12 @@
 management:
   endpoint:
+    health:
+      show-components: always # 각 서버 항목이 올라와 있는지만 체크
+#      show-details: always # 세부 내용까지 전부 다 체크
     shutdown:
       enabled: true
   endpoints:
     web:
       exposure:
         include: "*"
+#        exclude: "env,beans" # 엔드포인트 필터 (env, beans 엔드포인트는 제외)
