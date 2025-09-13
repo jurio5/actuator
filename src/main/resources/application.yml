@@ -1,4 +1,11 @@
 management:
+  info:
+    java:
+      enabled: true
+    os:
+      enabled: true
+    env:
+      enabled: true
   endpoint:
     health:
       show-components: always # 각 서버 항목이 올라와 있는지만 체크
@@ -10,3 +17,8 @@ management:
       exposure:
         include: "*"
 #        exclude: "env,beans" # 엔드포인트 필터 (env, beans 엔드포인트는 제외)
+
+info:
+  app:
+    name: hello-actuator
+    company: yj
