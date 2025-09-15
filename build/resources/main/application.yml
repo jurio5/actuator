@@ -9,7 +9,7 @@ management:
     git:
       mode: "full"
   server:
-    port: 9292
+    port: 8080 # actuator 전용 포트 설정 가능 (내부 망 포트)
   endpoint:
     health:
       show-components: always # 각 서버 항목이 올라와 있는지만 체크
@@ -30,3 +30,8 @@ info:
 logging:
   level:
     hello.controller: debug
+
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
