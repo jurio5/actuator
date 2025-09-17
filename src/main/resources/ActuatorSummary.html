@@ -1,0 +1,90 @@
+# 마이크로미터 (Micrometer)
+
+- 장애는 언제든 발생할 수 있으므로, **모니터링(경계)** 가 중요하다.
+- 서비스 운영 시 확인해야 할 지표:
+- CPU, 메모리, 커넥션 사용, 요청 수 등
+
+- 기존 문제:
+- 모니터링 툴이 바뀌면 측정 코드까지 모두 수정해야 함.
+
+- **Micrometer 역할**
+- 애플리케이션 메트릭을 표준화된 방식으로 수집/노출
+- 구현체(프로메테우스, 클라우드워치 등)를 쉽게 교체 가능
+- 스프링 부트 액추에이터에 기본 내장됨
+- `SLF4J`의 로그 추상화와 유사
+
+### 지원하는 모니터링 툴
+
+Prometheus, CloudWatch, Datadog, New Relic, Influx, JMX, Graphite 등
+
+## 프로메테우스 (Prometheus)
+
+- 메트릭을 **수집하고 저장하는 DB** 역할.
+- 스프링 부트 액츄에이터 + 마이크로미터가 제공하는 메트릭을 프로메테우스가 읽어가도록 설정.
+- 저장된 메트릭은 쿼리(PromQL)를 통해 조회 가능.
+- **아키텍처**
+1. 애플리케이션 → 마이크로미터 → 프로메테우스 포맷으로 메트릭 노출
+2. 프로메테우스 → 주기적으로 `/actuator/prometheus` 호출 → 메트릭 수집/저장
+3. 사용자는 프로메테우스 웹 콘솔에서 조회 가능
+4. 시각화는 그라파나를 통해 진행
+
+#### 애플리케이션 설정
+
+```java
+implementation 'io.micrometer:micrometer-registry-prometheus'
+```
+- `/actuator/prometheus` 엔드포인트 자동 생성
+
+#### 프로메테우스 설정 (`prometheus.yml` - 프로메테우스 폴더 YML)
+```java
+    scrape_configs:
+      - job_name: "spring-actuator"
+        metrics_path: '/actuator/prometheus'
+        scrape_interval: 1s // 주기는 보통 10s ~ 1m 정도를 권장
+        static_configs:
+          - targets: ['localhost:8080']
+```
+
+### 프로메테우스 기본 개념
+
+- **Gauge**: 값이 오르락내리락 (그래프 개념, CPU, 메모리, 커넥션 등)
+- **Counter**: 단순히 증가하는 값 (HTTP 요청 수, 로그 수)
+- Counter는 `increase()`, `rate()`, `irate()` 등을 사용해 시간 단위 증가량을 확인
+
+## 그라파나 (Grafana)
+
+- **대시보드 시각화 툴**
+- 프로메테우스 등 다양한 데이터소스를 지원
+- 대시보드를 통해 메트릭을 그래프, 차트 등으로 한눈에 확인 가능
+
+### 프로메테우스 연동
+1. Grafana → `Connections` → `Data sources` → `Add new data source`
+2. Prometheus 선택
+3. URL: `http://localhost:9090`
+4. `Save & Test`
+
+### 대시보드 만들기
+- `Dashboards → New Dashboard → save Dashboard`
+- `Add visualization` 클릭 후 `Builder` 옆 `Code` 클릭
+- PromQL 쿼리 작성 후 `Run queries` 클릭
+- 여러 개의 PromQL 추가하려면 `Add query` 클릭 후 쿼리 작성
+- 예시:
+- `system_cpu_usage` : 시스템 CPU 사용량
+- `process_cpu_usage` : JVM 프로세스 CPU 사용량
+- `disk_total_bytes - disk_free_bytes` : 사용 디스크 용량
+
+- 직접 메트릭 정보들을 PromQL 로 다 가져와서 대시보드를 구성해도 문제없지만, 그러한 메트릭 정보들을 하나 씩 다 가져오기에는 귀찮고 시간이 소모가 많이 되기에 이러한 것들을 모아둔 공유 대시보드가 있음
+
+### 공유 대시보드 활용
+
+- [Grafana Dashboards](https://grafana.com/grafana/dashboards)에서 가져오기
+- Spring Boot 모니터링: [11378](https://grafana.com/grafana/dashboards/11378-justai-system-monitor/)
+- Spring Boot 3.X 버전 : [19004](https://grafana.com/grafana/dashboards/19004-spring-boot-statistics/)
+- Micrometer JVM 대시보드: [4701](https://grafana.com/grafana/dashboards/4701-jvm-micrometer/)
+
+## 메트릭으로 문제 확인 예시
+
+- **CPU 사용량 초과** → `/cpu` 엔드포인트로 부하 → Grafana에서 CPU 급등 확인
+- **JVM 메모리 초과** → `/jvm` 반복 호출 → 메모리 지속 증가 → OOM 발생 추적 가능
+- **커넥션 풀 고갈** → `/jdbc` 요청에서 conn 닫지 않음 → 커넥션 고갈 → DB 대기 발생 확인
+- **에러 로그 급증** → `/error-log` 요청 → ERROR 로그 급증 확인
